@@ -98,7 +98,7 @@ motor intakeMotorB = motor(PORT6, ratio18_1, true);
 motor_group intake = motor_group(intakeMotorA, intakeMotorB);
 
 digital_out ClawPiston = digital_out(Brain.ThreeWirePort.A); 
-digital_out arm_thingy = digital_out(Brain.ThreeWirePort.B);
+digital_out arm = digital_out(Brain.ThreeWirePort.B);
 motor ClawMotor = motor(PORT8, vex::gearSetting::ratio18_1, false); 
 
 
