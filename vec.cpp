@@ -202,6 +202,40 @@ void bluePositiveAutonomous() {
   stopIntake(); 
 }
 
+void RedNegativeAutonomous() {
+  goBackward(1.03, 25);
+  turnLeft(0.16, 50);
+  goBackward(0.43, 30);
+  ClawPiston.set(true);
+  wait(1, sec); 
+  runIntake(70);
+  wait(1, sec);
+  stopIntake();
+  turnLeft(0.28, 50); 
+  auto driveForwardWrapper = []() { goForward(1.13, 40); };
+  thread driveThread(driveForwardWrapper);
+  driveThread.detach();
+  auto runIntakeWrapper = []() { runIntake(70); };
+  thread intakeThread(runIntakeWrapper);
+  intakeThread.detach();
+  wait(1, sec); 
+  goBackward(.53, 25);
+  turnLeft(0.46, 50); 
+  auto driveForwardWrapper2 = []() { goForward(0.75, 40); };
+  thread driveThread2(driveForwardWrapper2);
+  driveThread2.detach();
+  auto runIntakeWrapper2 = []() { runIntake(70); };
+  thread intakeThread2(runIntakeWrapper2);
+  intakeThread2.detach();
+  wait(1, sec); 
+  goForward(.53, 25);
+  turnLeft(0.56, 50); 
+  goBackward(1.53, 25);
+  /*wait(1, sec); 
+  stopIntake(); */
+
+}
+
 void autonomousRunner(const std::string& input) {
     switch (input[0]) { 
         case '0':
