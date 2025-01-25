@@ -98,106 +98,8 @@ motor intakeMotorB = motor(PORT6, ratio18_1, true);
 motor_group intake = motor_group(intakeMotorA, intakeMotorB);
 
 digital_out ClawPiston = digital_out(Brain.ThreeWirePort.A); 
-digital_out arm = digital_out(Brain.ThreeWirePort.B);
+digital_out arm_thingy = digital_out(Brain.ThreeWirePort.B);
 motor ClawMotor = motor(PORT8, vex::gearSetting::ratio18_1, false); 
-
-
-// PID constants (you'll need to tune these)
-double kP = 0.5;  // Proportional gain
-double kI = 0.1;  // Integral gain
-double kD = 0.2;  // Derivative gain
-double targetPosition = 0.0;  
-
-// Assuming you have these motor objects
-// Replace with your actual motor objects/library
-// LeftDriveSmart, RightDriveSmart 
-
-// --- Replace this with your motor library's function ---
-// Example: Assuming your motor library has a function to get rotations
-double getMotorRotation( /* Your motor object here */ ) {
-  // Replace this with the actual function call to get motor rotation
-  // Example: return yourMotorObject.getRotation();
-  return 0.1; // Replace with actual implementation
-}
-// -----------------------------------------------------
-
-// Wheel circumference (calculate this based on your wheel diameter)
-const double wheelCircumference = 3.14159 * 3.75; // 3.75 inches diameter
-
-void driveDistancePID(double targetDistance, bool isForward) {
-  targetPosition = targetDistance;
-
-  // PID variables
-  double error = 0;
-  double prevError = 0;
-  double integral = 0;
-  double derivative = 0;
-  double output = 0;
-
-  // Get the initial position (starts at 0 in this case)
-  double initialPosition = 0; 
-  double currentPosition = initialPosition; 
-
-  // Variables to track wheel rotations
-  double leftWheelRotation = 0;
-  double rightWheelRotation = 0;
-
-  while (true) {
-    // Calculate the error
-    error = targetPosition - currentPosition;
-
-    // Calculate the integral
-    integral += error * 0.02; 
-
-    // Calculate the derivative
-    derivative = (error - prevError) / 0.02;
-
-    // Calculate the PID output
-    output = kP * error + kI * integral + kD * derivative;
-    std::cout << output << std::endl;
-
-    // Apply the output to the motors (with direction control)
-    // Replace with your actual motor control functions
-    if (isForward) {
-      LeftDriveSmart.spin(forward, output, pct);
-      RightDriveSmart.spin(forward, output, pct);
-    } else {
-      LeftDriveSmart.spin(reverse, output, pct);
-      RightDriveSmart.spin(reverse, output, pct);
-    }
-
-    // Update wheel rotations
-    leftWheelRotation += getMotorRotation( /* Your left motor object */ );
-    rightWheelRotation += getMotorRotation( /* Your right motor object */ );
-
-    // Calculate distance traveled
-    double leftDistance = leftWheelRotation * wheelCircumference;
-    double rightDistance = rightWheelRotation * wheelCircumference;
-    double distanceTraveled = (leftDistance + rightDistance) / 2.0;
-
-    // Update current position
-    if (isForward) {
-      currentPosition += distanceTraveled;
-    } else {
-      currentPosition -= distanceTraveled;
-    }
-
-    // Update previous error
-    prevError = error;
-
-    // Exit the loop when the target is reached (with some tolerance)
-    if (fabs(error) < 1.0) { 
-      break;
-    }
-
-    wait(20, msec); // Replace with your wait function if needed
-  }
-
-  // Stop the motors
-  // Replace with your actual motor stop functions
-  LeftDriveSmart.stop();
-  RightDriveSmart.stop();
-}
 
 // Function to move the robot forward (time-based)
 void goForward(double time, int speed) {
@@ -272,11 +174,8 @@ void redPositiveAutonomous() {
   turnRight(0.1, 50);
   wait(1, sec);
   goBackward(1.5, 50);
-  wait(1, sec);
+  wait(3, sec);
   stopIntake(); 
-  turnRight(0.72, 50);
-  goBackward(2, 40); 
-  ClawPiston.set(false);
 }
 
 void bluePositiveAutonomous() {
@@ -299,21 +198,58 @@ void bluePositiveAutonomous() {
   turnLeft(0.1, 50);
   wait(1, sec);
   goBackward(1.5, 50);
-  wait(1, sec);
+  wait(3, sec);
   stopIntake(); 
-  turnLeft(0.72, 50);
-  goBackward(2, 40); 
-  ClawPiston.set(false);
+}
+
+void RedNegativeAutonomous() {
+  goBackward(1.03, 25);
+  turnLeft(0.16, 50);
+  goBackward(0.43, 30);
+  ClawPiston.set(true);
+  wait(1, sec); 
+  runIntake(70);
+  wait(1, sec);
+  stopIntake();
+  turnLeft(0.28, 50); 
+  auto driveForwardWrapper = []() { goForward(1.13, 40); };
+  thread driveThread(driveForwardWrapper);
+  driveThread.detach();
+  auto runIntakeWrapper = []() { runIntake(70); };
+  thread intakeThread(runIntakeWrapper);
+  intakeThread.detach();
+  wait(1, sec); 
+  goBackward(.53, 25);
+  turnLeft(0.46, 50); 
+  auto driveForwardWrapper2 = []() { goForward(0.75, 40); };
+  thread driveThread2(driveForwardWrapper2);
+  driveThread2.detach();
+  auto runIntakeWrapper2 = []() { runIntake(70); };
+  thread intakeThread2(runIntakeWrapper2);
+  intakeThread2.detach();
+  wait(1, sec); 
+  goForward(.53, 25);
+  turnLeft(0.56, 50); 
+  goBackward(1.53, 25);
+  /*wait(1, sec); 
+  stopIntake(); */
+
+}
+
+void autonomousRunner(const std::string& input) {
+    switch (input[0]) { 
+        case '0':
+            bluePositiveAutonomous(); 
+            break;
+        case '1':
+            redPositiveAutonomous();
+            break;
+    }
 }
 
 int main() {
   // Initializing Robot Configuration. DO NOT REMOVE!
   vexcodeInit();
   // Begin project code
-  bluePositiveAutonomous(); 
-
-  while (true) {
-    wait(20, msec);
-  }
-  
+  autonomousRunner("0")
 }
