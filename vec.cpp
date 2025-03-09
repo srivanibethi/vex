@@ -85,21 +85,23 @@ void playVexcodeSound(const char *soundName) {
 using namespace vex;
 
 // Robot configuration code.
-motor leftMotorA = motor(PORT1, ratio18_1, true);
-motor leftMotorB = motor(PORT2, ratio18_1, true);
-motor_group LeftDriveSmart = motor_group(leftMotorA, leftMotorB);
-motor rightMotorA = motor(PORT3, ratio18_1, false);
-motor rightMotorB = motor(PORT4, ratio18_1, false);
-motor_group RightDriveSmart = motor_group(rightMotorA, rightMotorB);
+motor leftMotorA = motor(PORT4, ratio6_1, true);
+motor leftMotorB = motor(PORT1, ratio6_1, true);
+motor leftMotorC = motor(PORT8, ratio6_1, false);
+motor_group LeftDriveSmart = motor_group(leftMotorA, leftMotorB, leftMotorC);
+motor rightMotorA = motor(PORT3, ratio6_1, false);
+motor rightMotorB = motor(PORT7, ratio6_1, false);
+motor rightMotorC = motor(PORT9, ratio6_1, true);
+motor_group RightDriveSmart = motor_group(rightMotorA, rightMotorB, rightMotorC);
 drivetrain Drivetrain = drivetrain(LeftDriveSmart, RightDriveSmart, 319.19, 295, 40, mm, 1.2);
 
-motor intakeMotorA = motor(PORT5, ratio18_1, false);
-motor intakeMotorB = motor(PORT6, ratio18_1, true); 
+motor intakeMotorA = motor(PORT2, ratio6_1, false);
+motor intakeMotorB = motor(PORT5, ratio6_1, true); 
 motor_group intake = motor_group(intakeMotorA, intakeMotorB);
 
-digital_out ClawPiston = digital_out(Brain.ThreeWirePort.A); 
+digital_out ClawPiston = digital_out(Brain.ThreeWirePort.E); 
 digital_out arm_thingy = digital_out(Brain.ThreeWirePort.B);
-motor ClawMotor = motor(PORT8, vex::gearSetting::ratio18_1, false); 
+motor ClawMotor = motor(PORT6, vex::gearSetting::ratio6_1, false); 
 
 // Function to move the robot forward (time-based)
 void goForward(double time, int speed) {
@@ -156,50 +158,52 @@ void scoreRings() {
 
 void redPositiveAutonomous() {
   turnRight(0.2, 50);
-  goBackward(1, 20);
-  turnLeft(0.3, 50); 
-  goBackward(0.6, 40);
+  goBackward(1.6, 20);
+  turnLeft(0.3, 50);
+  goBackward(0.8, 40);
   ClawPiston.set(true);
   wait(1, sec); 
   runIntake(70);
   stopIntake();
-  turnRight(0.46, 50); 
-  auto driveForwardWrapper = []() { goForward(1.6, 50); };
+  turnRight(0.56, 50);
+  wait(1, sec); 
+  auto driveForwardWrapper = []() { goForward(1, 40); };
   thread driveThread(driveForwardWrapper);
   driveThread.detach();
-  auto runIntakeWrapper = []() { runIntake(70); };
+  auto runIntakeWrapper = []() { runIntake(50); };
   thread intakeThread(runIntakeWrapper);
   intakeThread.detach();
-  wait(1, sec); 
+  wait(1, sec);
   turnRight(0.1, 50);
   wait(1, sec);
-  goBackward(1.5, 50);
-  wait(3, sec);
+  goBackward(1.5, 40);
+  wait(5, sec);
   stopIntake(); 
 }
 
 void bluePositiveAutonomous() {
-  turnLeft(0.2, 50);
-  goBackward(1.5, 20);
-  turnRight(0.3, 50); 
-  goBackward(0.7, 40);
-  ClawPiston.set(true);
-  wait(1, sec); 
-  runIntake(70);
-  stopIntake();
-  turnLeft(0.6, 50); 
-  auto driveForwardWrapper = []() { goForward(1.6, 50); };
-  thread driveThread(driveForwardWrapper);
-  driveThread.detach();
-  auto runIntakeWrapper = []() { runIntake(70); };
-  thread intakeThread(runIntakeWrapper);
-  intakeThread.detach();
-  wait(1, sec); 
-  turnLeft(0.1, 50);
-  wait(1, sec);
-  goBackward(1.5, 50);
-  wait(3, sec);
-  stopIntake(); 
+    turnLeft(0.2, 50);
+    goBackward(1.1, 20);
+    turnRight(0.25, 50);
+    goBackward(0.9, 40);
+    ClawPiston.set(true);
+    wait(1, sec); 
+    runIntake(70);
+    stopIntake();
+    turnLeft(0.43, 50); 
+    auto driveForwardWrapper = []() { goForward(0.8, 50); };
+    thread driveThread(driveForwardWrapper);
+    driveThread.detach();
+    auto runIntakeWrapper = []() { runIntake(50); };
+    thread intakeThread(runIntakeWrapper);
+    intakeThread.detach();
+    wait(1, sec); 
+    turnRight(0.25, 50);
+    wait(5, sec);
+    goBackward(1.5, 50);
+    wait(3, sec);
+    stopIntake(); 
+
 }
 
 void RedNegativeAutonomous() {
@@ -239,10 +243,10 @@ void RedNegativeAutonomous() {
 void autonomousRunner(const std::string& input) {
     switch (input[0]) { 
         case '0':
-            bluePositiveAutonomous(); 
+            redPositiveAutonomous(); 
             break;
         case '1':
-            redPositiveAutonomous();
+            bluePositiveAutonomous();
             break;
     }
 }
@@ -251,5 +255,5 @@ int main() {
   // Initializing Robot Configuration. DO NOT REMOVE!
   vexcodeInit();
   // Begin project code
-  autonomousRunner("0")
+  autonomousRunner("1");
 }
