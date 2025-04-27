@@ -1,0 +1,662 @@
+#pragma region VEXcode Generated Robot Configuration
+// Make sure all required headers are included.
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <math.h>
+#include <string.h>
+
+
+#include "vex.h"
+
+using namespace vex;
+
+// Brain should be defined by default
+brain Brain;
+
+
+// START V5 MACROS
+#define waitUntil(condition)                                                   \
+  do {                                                                         \
+    wait(5, msec);                                                             \
+  } while (!(condition))
+
+#define repeat(iterations)                                                     \
+  for (int iterator = 0; iterator < iterations; iterator++)
+// END V5 MACROS
+
+
+// Robot configuration code.
+controller Controller1 = controller(primary);
+motor intakeMotorA = motor(PORT5, ratio18_1, false);
+motor intakeMotorB = motor(PORT6, ratio18_1, true);
+motor_group intake = motor_group(intakeMotorA, intakeMotorB);
+
+digital_out clamp = digital_out(Brain.ThreeWirePort.A);
+digital_out arm_thingy = digital_out(Brain.ThreeWirePort.B);
+motor leftMotorA = motor(PORT1, ratio18_1, true);
+motor leftMotorB = motor(PORT2, ratio18_1, true);
+motor_group LeftDriveSmart = motor_group(leftMotorA, leftMotorB);
+motor rightMotorA = motor(PORT3, ratio18_1, false);
+motor rightMotorB = motor(PORT4, ratio18_1, false);
+motor_group RightDriveSmart = motor_group(rightMotorA, rightMotorB);
+drivetrain Drivetrain = drivetrain(LeftDriveSmart, RightDriveSmart, 319.19, 295, 40, mm, 1);
+
+
+
+// generating and setting random seed
+void initializeRandomSeed(){
+  int systemTime = Brain.Timer.systemHighResolution();
+  double batteryCurrent = Brain.Battery.current();
+  double batteryVoltage = Brain.Battery.voltage(voltageUnits::mV);
+
+  // Combine these values into a single integer
+  int seed = int(batteryVoltage + batteryCurrent * 100) + systemTime;
+
+  // Set the seed
+  srand(seed);
+}
+
+
+
+void vexcodeInit() {
+
+  //Initializing random seed.
+  initializeRandomSeed(); 
+}
+
+
+// Helper to make playing sounds from the V5 in VEXcode easier and
+// keeps the code cleaner by making it clear what is happening.
+void playVexcodeSound(const char *soundName) {
+  printf("VEXPlaySound:%s\n", soundName);
+  wait(5, msec);
+}
+
+
+
+// define variable for remote controller enable/disable
+bool RemoteControlCodeEnabled = true;
+// define variables used for controlling motors based on controller inputs
+bool Controller1LeftShoulderControlMotorsStopped = true;
+bool DrivetrainLNeedsToBeStopped_Controller1 = true;
+bool DrivetrainRNeedsToBeStopped_Controller1 = true;
+
+// define a task that will handle monitoring inputs from Controller1
+int rc_auto_loop_function_Controller1() {
+  // process the controller input every 20 milliseconds
+  // update the motors based on the input values
+  while(true) {
+    if(RemoteControlCodeEnabled) {
+      
+      // calculate the drivetrain motor velocities from the controller joystick axies
+      // left = Axis3 + Axis1
+      // right = Axis3 - Axis1
+      int drivetrainLeftSideSpeed = Controller1.Axis3.position() + Controller1.Axis1.position();
+      int drivetrainRightSideSpeed = Controller1.Axis3.position() - Controller1.Axis1.position();
+      
+      // check if the value is inside of the deadband range
+      if (drivetrainLeftSideSpeed < 5 && drivetrainLeftSideSpeed > -5) {
+        // check if the left motor has already been stopped
+        if (DrivetrainLNeedsToBeStopped_Controller1) {
+          // stop the left drive motor
+          LeftDriveSmart.stop();
+          // tell the code that the left motor has been stopped
+          DrivetrainLNeedsToBeStopped_Controller1 = false;
+        }
+      } else {
+        // reset the toggle so that the deadband code knows to stop the left motor nexttime the input is in the deadband range
+        DrivetrainLNeedsToBeStopped_Controller1 = true;
+      }
+      // check if the value is inside of the deadband range
+      if (drivetrainRightSideSpeed < 5 && drivetrainRightSideSpeed > -5) {
+        // check if the right motor has already been stopped
+        if (DrivetrainRNeedsToBeStopped_Controller1) {
+          // stop the right drive motor
+          RightDriveSmart.stop();
+          // tell the code that the right motor has been stopped
+          DrivetrainRNeedsToBeStopped_Controller1 = false;
+        }
+      } else {
+        // reset the toggle so that the deadband code knows to stop the right motor next time the input is in the deadband range
+        DrivetrainRNeedsToBeStopped_Controller1 = true;
+      }
+      
+      // only tell the left drive motor to spin if the values are not in the deadband range
+      if (DrivetrainLNeedsToBeStopped_Controller1) {
+        LeftDriveSmart.setVelocity(drivetrainLeftSideSpeed, percent);
+        LeftDriveSmart.spin(forward);
+      }
+      // only tell the right drive motor to spin if the values are not in the deadband range
+      if (DrivetrainRNeedsToBeStopped_Controller1) {
+        RightDriveSmart.setVelocity(drivetrainRightSideSpeed, percent);
+        RightDriveSmart.spin(forward);
+      }
+      // check the ButtonL1/ButtonL2 status to control intake
+      if (Controller1.ButtonL1.pressing()) {
+        intake.spin(forward);
+        Controller1LeftShoulderControlMotorsStopped = false;
+      } else if (Controller1.ButtonL2.pressing()) {
+        intake.spin(reverse);
+        Controller1LeftShoulderControlMotorsStopped = false;
+      } else if (!Controller1LeftShoulderControlMotorsStopped) {
+        intake.stop();
+        // set the toggle so that we don't constantly tell the motor to stop when the buttons are released
+        Controller1LeftShoulderControlMotorsStopped = true;
+      }
+    }
+    // wait before repeating the process
+    wait(20, msec);
+  }
+  return 0;
+}
+
+task rc_auto_loop_task_Controller1(rc_auto_loop_function_Controller1);
+
+#pragma endregion VEXcode Generated Robot Configuration
+
+// Include the V5 Library
+#include "vex.h"
+  
+// Allows for easier use of the VEX Library
+using namespace vex;
+
+competition Competition;
+// User defined function
+void myblockfunction_redNegitiveAutonomous();
+// User defined function
+void myblockfunction_redPositiveAutonomous();
+// User defined function
+void myblockfunction_bluePositiveAutonomous();
+// User defined function
+void myblockfunction_Programing_skills();
+// User defined function
+void myblockfunction_Blue_right();
+// User defined function
+void myblockfunction_Red_right();
+// User defined function
+void myblockfunction_Red_left();
+// User defined function
+void myblockfunction_Blue_left();
+
+int Brain_precision = 0, Console_precision = 0, Controller1_precision = 0;
+
+float myVariable, clamp_status, armThingy_status, auton_pick, game_start;
+
+
+
+// Function to move the robot forward (time-based)
+void goForward(double time, int speed) {
+  LeftDriveSmart.spin(forward, speed, pct);
+  RightDriveSmart.spin(forward, speed, pct);
+  wait(time, sec); 
+  LeftDriveSmart.stop();
+  RightDriveSmart.stop(); 
+}
+
+void goBackward(double time, int speed) {
+  LeftDriveSmart.spin(reverse, speed, pct);
+  RightDriveSmart.spin(reverse, speed, pct);
+  wait(time, sec); 
+  LeftDriveSmart.stop();
+  RightDriveSmart.stop(); 
+}
+
+// Function to turn the robot (time-based)
+void turnLeft(double time, int speed) {
+  LeftDriveSmart.spin(forward, speed, pct);
+  RightDriveSmart.spin(reverse, speed, pct);
+  wait(time, sec); 
+  LeftDriveSmart.stop();
+  RightDriveSmart.stop();
+}
+
+// Function to turn the robot (time-based)
+void turnRight(double time, int speed) {
+  LeftDriveSmart.spin(reverse, speed, pct);
+  RightDriveSmart.spin(forward, speed, pct);
+  wait(time, sec); 
+  LeftDriveSmart.stop();
+  RightDriveSmart.stop();
+}
+
+// Function to run the intake
+void runIntake(int speed) {
+  intake.spin(forward, speed, pct); 
+}
+
+void stopIntake() {
+  intake.stop();
+}
+
+
+// Function to score rings
+void scoreRings() {
+  goForward(-1, 100); 
+
+  intake.spin(forward, 100, pct); 
+  wait(1, sec); 
+  intake.stop(); 
+}
+
+
+// User defined function
+void myblockfunction_Programing_skills() {
+  Drivetrain.setStopping(coast);
+  intake.setVelocity(100.0, percent);
+  Drivetrain.setDriveVelocity(50.0, percent);
+  Drivetrain.setTurnVelocity(50.0, percent);
+  clamp_status = 0.0;
+  armThingy_status = 0.0;
+  intake.spinFor(forward, 3.0, turns, true);
+  Drivetrain.driveFor(forward, 8.0, inches, true);
+  Drivetrain.turnFor(right, 80.0, degrees, true);
+  Drivetrain.setDriveVelocity(20.0, percent);
+  Drivetrain.setTurnVelocity(20.0, percent);
+  Drivetrain.driveFor(reverse, 18.0, inches, true);
+  wait(0.1, seconds);
+  clamp.set(true);
+  wait(0.5, seconds);
+  Drivetrain.setDriveVelocity(50.0, percent);
+  Drivetrain.setTurnVelocity(50.0, percent);
+  Drivetrain.turnFor(right, 165.0, degrees, true);
+  intake.spinFor(forward, 13.0, turns, false);
+  Drivetrain.setDriveVelocity(30.0, percent);
+  Drivetrain.setTurnVelocity(30.0, percent);
+  Drivetrain.driveFor(forward, 24.0, inches, true);
+  Drivetrain.driveFor(reverse, 8.0, inches, true);
+  Drivetrain.turnFor(left, 72.0, degrees, true);
+  Drivetrain.driveFor(forward, 12.0, inches, true);
+  Drivetrain.turnFor(left, 135.0, degrees, true);
+  Drivetrain.driveFor(reverse, 2.0, inches, true);
+  Drivetrain.turnFor(left, 40.0, degrees, true);
+  Drivetrain.driveFor(reverse, 2.0, inches, true);
+  wait(0.1, seconds);
+  clamp.set(false);
+}
+
+// User defined function
+void myblockfunction_Blue_right() {
+  Drivetrain.setStopping(coast);
+  intake.setVelocity(100.0, percent);
+  Drivetrain.setDriveVelocity(30.0, percent);
+  Drivetrain.setTurnVelocity(30.0, percent);
+  clamp_status = 0.0;
+  armThingy_status = 0.0;
+  Drivetrain.driveFor(reverse, 24.0, inches, true);
+  clamp.set(true);
+  clamp_status = 1.0;
+  wait(1.0, seconds);
+  intake.spinFor(forward, 750.0, degrees, true);
+  Drivetrain.setDriveVelocity(50.0, percent);
+  Drivetrain.setTurnVelocity(50.0, percent);
+  Drivetrain.turnFor(left, 115.0, degrees, true);
+  Drivetrain.setDriveVelocity(30.0, percent);
+  Drivetrain.setTurnVelocity(30.0, percent);
+  intake.spinFor(forward, 18.0, turns, false);
+  Drivetrain.driveFor(forward, 14.0, inches, true);
+  Drivetrain.turnFor(right, 90.0, degrees, true);
+  Drivetrain.driveFor(forward, 9.0, inches, true);
+  Drivetrain.setDriveVelocity(50.0, percent);
+  Drivetrain.setTurnVelocity(50.0, percent);
+  Drivetrain.turnFor(right, 95.0, degrees, true);
+  intake.spinFor(forward, 3.0, turns, false);
+  Drivetrain.driveFor(forward, 25.0, inches, true);
+}
+
+// User defined function
+void myblockfunction_Red_right() {
+  Drivetrain.setStopping(coast);
+  intake.setVelocity(100.0, percent);
+  Drivetrain.setDriveVelocity(30.0, percent);
+  Drivetrain.setTurnVelocity(30.0, percent);
+  clamp_status = 0.0;
+  armThingy_status = 0.0;
+  Drivetrain.driveFor(reverse, 24.0, inches, true);
+  clamp.set(true);
+  clamp_status = 1.0;
+  wait(1.0, seconds);
+  intake.spinFor(forward, 750.0, degrees, true);
+  Drivetrain.setDriveVelocity(50.0, percent);
+  Drivetrain.setTurnVelocity(50.0, percent);
+  Drivetrain.turnFor(left, 135.0, degrees, true);
+  intake.spinFor(forward, 100.0, turns, false);
+  Drivetrain.driveFor(forward, 24.0, inches, true);
+  Drivetrain.driveFor(reverse, 24.0, inches, true);
+  Drivetrain.turnFor(left, 85.0, degrees, true);
+  Drivetrain.setDriveVelocity(25.0, percent);
+  Drivetrain.setTurnVelocity(25.0, percent);
+  Drivetrain.driveFor(forward, 6.0, inches, true);
+}
+
+// User defined function
+void myblockfunction_Red_left() {
+  // fake red left
+  Drivetrain.setStopping(coast);
+  intake.setVelocity(100.0, percent);
+  Drivetrain.setDriveVelocity(35.0, percent);
+  Drivetrain.setTurnVelocity(35.0, percent);
+  clamp_status = 0.0;
+  armThingy_status = 0.0;
+  Drivetrain.driveFor(reverse, 24.0, inches, true);
+  clamp.set(true);
+  clamp_status = 1.0;
+  wait(1.0, seconds);
+  intake.spinFor(forward, 100.0, turns, false);
+  Drivetrain.setDriveVelocity(50.0, percent);
+  Drivetrain.setTurnVelocity(50.0, percent);
+  Drivetrain.turnFor(right, 135.0, degrees, true);
+  Drivetrain.driveFor(forward, 10.0, inches, true);
+  // rest of code
+}
+
+// User defined function
+void myblockfunction_Blue_left() {
+  Drivetrain.setStopping(coast);
+  intake.setVelocity(100.0, percent);
+  Drivetrain.setDriveVelocity(30.0, percent);
+  Drivetrain.setTurnVelocity(30.0, percent);
+  clamp_status = 0.0;
+  armThingy_status = 0.0;
+  Drivetrain.driveFor(reverse, 24.0, inches, true);
+  clamp.set(true);
+  clamp_status = 1.0;
+  wait(1.0, seconds);
+  intake.spinFor(forward, 700.0, degrees, true);
+  Drivetrain.setDriveVelocity(50.0, percent);
+  Drivetrain.setTurnVelocity(50.0, percent);
+  Drivetrain.turnFor(right, 78.0, degrees, true);
+  intake.spinFor(forward, 1800.0, degrees, false);
+  Drivetrain.driveFor(forward, 24.0, inches, true);
+  Drivetrain.driveFor(reverse, 24.0, inches, true);
+  Drivetrain.turnFor(right, 95.0, degrees, true);
+  Drivetrain.driveFor(forward, 6.0, inches, true);
+}
+
+// "when started" hat block
+int whenStarted1() {
+  clamp.set(false);
+  arm_thingy.set(false);
+  intake.setVelocity(100.0, percent);
+  Drivetrain.setDriveVelocity(80.0, percent);
+  Drivetrain.setStopping(coast);
+  Drivetrain.setTurnVelocity(80.0, percent);
+  armThingy_status = 0.0;
+  clamp_status = 0.0;
+  auton_pick = 1.0;
+  game_start = 0.0;
+  Brain.Timer.clear();
+  return 0;
+}
+
+// "when autonomous" hat block
+int onauton_autonomous_0() {
+  if (auton_pick == 0.0) {
+    Controller1.Screen.clearScreen();
+    Controller1.Screen.setCursor(1, 1);
+    Controller1.Screen.print("Blue left");
+    // Blue left
+    myblockfunction_Blue_left();
+  }
+  if (auton_pick == 1.0) {
+    Controller1.Screen.clearScreen();
+    Controller1.Screen.setCursor(1, 1);
+    Controller1.Screen.print("Blue right");
+    // Blue right
+    myblockfunction_Blue_right();
+  }
+  if (auton_pick == 2.0) {
+    Controller1.Screen.clearScreen();
+    Controller1.Screen.setCursor(1, 1);
+    Controller1.Screen.print("Red right");
+    // Red right
+    myblockfunction_Red_right();
+  }
+  if (auton_pick == 3.0) {
+    Controller1.Screen.clearScreen();
+    Controller1.Screen.setCursor(1, 1);
+    Controller1.Screen.print("Red left");
+    // Red left
+    myblockfunction_Red_left();
+  }
+  if (auton_pick == 4.0) {
+    Controller1.Screen.clearScreen();
+    Controller1.Screen.setCursor(1, 1);
+    Controller1.Screen.print("Programing skills");
+    // Programing skills
+    myblockfunction_Programing_skills();
+  }
+  if (auton_pick == 5.0) {
+    Controller1.Screen.clearScreen();
+    Controller1.Screen.setCursor(1, 1);
+    Controller1.Screen.print("red Positive Autonomous");
+    // Red positive side (not mine)
+    myblockfunction_redPositiveAutonomous();
+  }
+  if (auton_pick == 6.0) {
+    Controller1.Screen.clearScreen();
+    Controller1.Screen.setCursor(1, 1);
+    Controller1.Screen.print("blue Positive Autonomous");
+    // Blue positive side (not mine)
+    myblockfunction_bluePositiveAutonomous();
+  }
+  if (auton_pick == 7.0) {
+    Controller1.Screen.clearScreen();
+    Controller1.Screen.setCursor(1,1);
+    Controller1.Screen.print("red Negative Autonomous");
+    // Red negative side (not mine)
+  }
+  return 0;
+}
+void myblockfunction_redPositiveAutonomous() {
+  turnRight(0.2, 50);
+  goBackward(1, 20);
+  turnLeft(0.3, 50); 
+  goBackward(0.6, 40);
+  clamp.set(true);
+  wait(1, sec); 
+  runIntake(70);
+  stopIntake();
+  turnRight(0.46, 50); 
+  auto driveForwardWrapper = []() { goForward(1.6, 50); };
+  thread driveThread(driveForwardWrapper);
+  driveThread.detach();
+  auto runIntakeWrapper = []() { runIntake(70); };
+  thread intakeThread(runIntakeWrapper);
+  intakeThread.detach();
+  wait(1, sec); 
+  turnRight(0.1, 50);
+  wait(1, sec);
+  goBackward(1.5, 50);
+  wait(3, sec);
+  stopIntake(); 
+}
+
+void myblockfunction_bluePositiveAutonomous() {
+  turnLeft(0.2, 50);
+  goBackward(1.5, 20);
+  turnRight(0.3, 50); 
+  goBackward(0.7, 40);
+  clamp.set(true);
+  wait(1, sec); 
+  runIntake(70);
+  stopIntake();
+  turnLeft(0.6, 50); 
+  auto driveForwardWrapper = []() { goForward(1.6, 50); };
+  thread driveThread(driveForwardWrapper);
+  driveThread.detach();
+  auto runIntakeWrapper = []() { runIntake(70); };
+  thread intakeThread(runIntakeWrapper);
+  intakeThread.detach();
+  wait(1, sec); 
+  turnLeft(0.1, 50);
+  wait(1, sec);
+  goBackward(1.5, 50);
+  wait(3, sec);
+  stopIntake(); 
+}
+
+void myblockfunction_redNegativeAutonomous() {
+  goBackward(1.03, 25);
+  turnLeft(0.16, 50);
+  goBackward(0.43, 30);
+  clamp.set(true);
+  wait(1, sec); 
+  runIntake(70);
+  wait(1, sec);
+  stopIntake();
+  turnLeft(0.28, 50); 
+  auto driveForwardWrapper = []() { goForward(1.13, 40); };
+  thread driveThread(driveForwardWrapper);
+  driveThread.detach();
+  auto runIntakeWrapper = []() { runIntake(70); };
+  thread intakeThread(runIntakeWrapper);
+  intakeThread.detach();
+  wait(1, sec); 
+  goBackward(.53, 25);
+  turnLeft(0.46, 50); 
+  auto driveForwardWrapper2 = []() { goForward(0.75, 40); };
+  thread driveThread2(driveForwardWrapper2);
+  driveThread2.detach();
+  auto runIntakeWrapper2 = []() { runIntake(70); };
+  thread intakeThread2(runIntakeWrapper2);
+  intakeThread2.detach();
+  wait(1, sec); 
+  goForward(.53, 25);
+  turnLeft(0.56, 50); 
+  goBackward(1.53, 25);
+  /*wait(1, sec); 
+  stopIntake(); */
+
+}
+
+// "when Controller1 ButtonR1 pressed" hat block
+void onevent_Controller1ButtonR1_pressed_0() {
+  if (armThingy_status == 0.0) {
+    arm_thingy.set(false);
+    armThingy_status = 1.0;
+  }
+  else {
+    arm_thingy.set(true);
+    armThingy_status = 0.0;
+  }
+}
+
+// "when Brain timer" hat block
+void onevent_Brain_timer_0() {
+  game_start = 1.0;
+}
+
+// "when Controller1 ButtonX pressed" hat block
+void onevent_Controller1ButtonX_pressed_0() {
+  if (clamp_status == 0.0) {
+    clamp.set(true);
+    clamp_status = 1.0;
+  }
+  else {
+    clamp.set(false);
+    clamp_status = 0.0;
+  }
+}
+
+// "when Controller1 ButtonUp pressed" hat block
+void onevent_Controller1ButtonUp_pressed_0() {
+  if (game_start == 0.0) {
+    auton_pick = auton_pick + 1.0;
+    if (auton_pick > 7.0) {
+      auton_pick = 0.0;
+    }
+    if (auton_pick == 0.0) {
+      Controller1.Screen.clearScreen();
+      Controller1.Screen.setCursor(1, 1);
+      Controller1.Screen.print("Blue left");
+      // Blue left
+    }
+    if (auton_pick == 1.0) {
+      Controller1.Screen.clearScreen();
+      Controller1.Screen.setCursor(1, 1);
+      Controller1.Screen.print("Blue right");
+      // Blue right
+    }
+    if (auton_pick == 2.0) {
+      Controller1.Screen.clearScreen();
+      Controller1.Screen.setCursor(1, 1);
+      Controller1.Screen.print("Red right");
+      // Red right
+    }
+    if (auton_pick == 3.0) {
+      Controller1.Screen.clearScreen();
+      Controller1.Screen.setCursor(1, 1);
+      Controller1.Screen.print("Red left");
+      // Red left
+    }
+    if (auton_pick == 4.0) {
+      Controller1.Screen.clearScreen();
+      Controller1.Screen.setCursor(1, 1);
+      Controller1.Screen.print("Programing skills");
+      // Programing skills
+    }
+    if (auton_pick == 5.0) {
+      Controller1.Screen.clearScreen();
+      Controller1.Screen.setCursor(1,1);
+      Controller1.Screen.print("auton side red positive ");
+      // Srivani Bethi
+    }
+    if (auton_pick == 6.0) {
+      Controller1.Screen.clearScreen();
+      Controller1.Screen.setCursor(1,1);
+      Controller1.Screen.print("auton side blue positive ");
+      // Srivani Bethe's other code
+    }
+    if (auton_pick == 7.0) {
+      Controller1.Screen.clearScreen();
+      Controller1.Screen.setCursor(1,1);
+      Controller1.Screen.print("auton side red negative ");
+      // Srivani Bethe's "other" code
+    }
+  }
+}
+
+void VEXcode_driver_task() {
+  // Start the driver control tasks....
+
+  while(Competition.isDriverControl() && Competition.isEnabled()) {this_thread::sleep_for(10);}
+
+  return;
+}
+
+void VEXcode_auton_task() {
+  // Start the auton control tasks....
+  vex::task auto0(onauton_autonomous_0);
+  while(Competition.isAutonomous() && Competition.isEnabled()) {this_thread::sleep_for(10);}
+  auto0.stop();
+  return;
+}
+
+
+
+int main() {
+  vex::competition::bStopTasksBetweenModes = false;
+  Competition.autonomous(VEXcode_auton_task);
+  Competition.drivercontrol(VEXcode_driver_task);
+
+  // Initializing Robot Configuration. DO NOT REMOVE!
+  vexcodeInit();
+
+  // register event handlers
+  Controller1.ButtonR1.pressed(onevent_Controller1ButtonR1_pressed_0);
+  Brain.Timer.event(onevent_Brain_timer_0,10000);
+  Controller1.ButtonX.pressed(onevent_Controller1ButtonX_pressed_0);
+  Controller1.ButtonUp.pressed(onevent_Controller1ButtonUp_pressed_0);
+
+  wait(15, msec);
+  // post event registration
+
+  // set default print color to black
+  printf("\033[30m");
+
+  // wait for rotation sensor to fully initialize
+  wait(30, msec);
+
+  whenStarted1();
+}
